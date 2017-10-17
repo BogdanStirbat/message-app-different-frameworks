@@ -5,6 +5,16 @@ import co.paralleluniverse.fibers.SuspendExecution;
 import co.paralleluniverse.fibers.Suspendable;
 import co.paralleluniverse.fibers.dropwizard.FiberApplication;
 import co.paralleluniverse.fibers.dropwizard.FiberDBIFactory;
+import co.paralleluniverse.fibers.mongodb.FiberMongoCollectionImpl;
+import co.paralleluniverse.fibers.mongodb.FiberMongoFactory;
+import com.allanbank.mongodb.MongoClient;
+import com.allanbank.mongodb.MongoCollection;
+import com.allanbank.mongodb.MongoDatabase;
+import com.allanbank.mongodb.bson.Document;
+import com.allanbank.mongodb.bson.Element;
+import com.allanbank.mongodb.bson.builder.BuilderFactory;
+import com.allanbank.mongodb.bson.builder.DocumentBuilder;
+import com.allanbank.mongodb.bson.element.ObjectId;
 import com.codahale.metrics.*;
 import com.codahale.metrics.annotation.*;
 import com.fasterxml.jackson.annotation.*;
@@ -16,6 +26,7 @@ import io.dropwizard.db.*;
 import io.dropwizard.setup.*;
 import java.sql.*;
 import java.util.*;
+import java.util.Date;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.validation.Valid;
@@ -27,6 +38,8 @@ import org.skife.jdbi.v2.*;
 import org.skife.jdbi.v2.sqlobject.*;
 import org.skife.jdbi.v2.sqlobject.customizers.RegisterMapper;
 import org.skife.jdbi.v2.tweak.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Main extends FiberApplication<Main.JModernConfiguration> {
     public static void main(String[] args) throws Exception {
@@ -41,6 +54,7 @@ public class Main extends FiberApplication<Main.JModernConfiguration> {
     public void fiberRun(JModernConfiguration cfg, Environment env) throws ClassNotFoundException {
         JmxReporter.forRegistry(env.metrics()).build().start(); // Manually add JMX reporting (Dropwizard regression)
 
+        env.jersey().register(new MessageResource());
         env.jersey().register(new HelloWorldResource(cfg.getTemplate(), cfg.getDefaultName()));
 
         Feign.Builder feignBuilder = Feign.builder()
@@ -62,6 +76,39 @@ public class Main extends FiberApplication<Main.JModernConfiguration> {
         public DataSourceFactory getDataSourceFactory() { return database; }
         public String getTemplate()    { return template; }
         public String getDefaultName() { return defaultName; }
+    }
+
+    @Path("/messages")
+    @Produces(MediaType.APPLICATION_JSON)
+    public static class MessageResource {
+        private static final Logger LOGGER = LoggerFactory.getLogger(MessageResource.class);
+
+        private FiberMongoCollectionImpl mongoCollection;
+
+        public MessageResource() {
+            MongoClient mongoClient = FiberMongoFactory.createClient("mongodb://localhost:27017/?maxConnectionCount=10");
+            MongoDatabase mongoDb = mongoClient.getDatabase("message_demo");
+            mongoCollection = (FiberMongoCollectionImpl) mongoDb.getCollection("messages");
+        }
+
+        @GET
+        @Path("/{id}")
+        @Suspendable
+        public Message findMessage(@PathParam("id") String messageId) throws InterruptedException {
+            ObjectId objectId = new ObjectId(messageId);
+
+            DocumentBuilder findDocBuilder = BuilderFactory.start();
+            findDocBuilder.addObjectId("_id", objectId);
+            Document foundDocument = mongoCollection.findOne(findDocBuilder);
+
+            Element textElement = foundDocument.get("text");
+            String text = textElement.getValueAsString();
+
+            Message message = new Message();
+            message.setId(messageId);
+            message.setText(text);
+            return message;
+        }
     }
 
     // The actual service
@@ -197,5 +244,48 @@ public class Main extends FiberApplication<Main.JModernConfiguration> {
 
         @JsonProperty public long getId() { return id; }
         @JsonProperty public String getContent() { return content; }
+    }
+
+    public static class Message {
+        private String id;
+
+        private String text;
+
+        private Date createdAt = new Date();
+
+        public Message() {
+
+        }
+
+        public Message(String text) {
+            this.text = text;
+        }
+
+        @JsonProperty
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        @JsonProperty
+        public String getText() {
+            return text;
+        }
+
+        public void setText(String text) {
+            this.text = text;
+        }
+
+        @JsonProperty
+        public Date getCreatedAt() {
+            return createdAt;
+        }
+
+        public void setCreatedAt(Date createdAt) {
+            this.createdAt = createdAt;
+        }
     }
 }
