@@ -1,6 +1,7 @@
 package com.bstirbat.message.dw;
 
 import co.paralleluniverse.fibers.dropwizard.FiberApplication;
+import co.paralleluniverse.fibers.mongodb.FiberMongoCollectionImpl;
 import co.paralleluniverse.fibers.mongodb.FiberMongoFactory;
 import com.allanbank.mongodb.MongoClient;
 import com.allanbank.mongodb.MongoCollection;
@@ -31,7 +32,7 @@ public class Main extends FiberApplication<Main.JModernConfiguration> {
 
         MongoClient mongoClient = FiberMongoFactory.createClient("mongodb://localhost:27017/?maxConnectionCount=10");
         MongoDatabase mongoDb = mongoClient.getDatabase("message_demo");
-        MongoCollection mongoCollection = mongoDb.getCollection("messages");
+        MongoCollection mongoCollection = (FiberMongoCollectionImpl) mongoDb.getCollection("messages");
 
         MessageRepository messageRepository = new MessageRepositoryImpl(mongoCollection);
         MessageController messageController = new MessageController(messageRepository);
