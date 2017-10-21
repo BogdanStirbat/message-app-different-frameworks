@@ -1,5 +1,6 @@
 package com.bstirbat.message.dw.repository;
 
+import co.paralleluniverse.fibers.Suspendable;
 import com.allanbank.mongodb.MongoCollection;
 import com.allanbank.mongodb.bson.Document;
 import com.allanbank.mongodb.bson.Element;
@@ -20,6 +21,7 @@ public class MessageRepositoryImpl implements MessageRepository {
     }
 
     @Override
+    @Suspendable
     public Message findById(String id) {
         ObjectId objectId = new ObjectId(id);
 
