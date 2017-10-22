@@ -9,12 +9,20 @@ import com.allanbank.mongodb.MongoDatabase;
 import com.bstirbat.message.dw.controller.MessageController;
 import com.bstirbat.message.dw.repository.MessageRepository;
 import com.bstirbat.message.dw.repository.MessageRepositoryImpl;
+//import com.bstirbat.message.dw.repository.MongoDbAsyncMessageRepositoryImpl;
 import com.codahale.metrics.*;
 import com.fasterxml.jackson.annotation.*;
+//import com.mongodb.ConnectionString;
+//import com.mongodb.async.client.MongoClient;
+//import com.mongodb.async.client.MongoClients;
+//import com.mongodb.async.client.MongoCollection;
+//import com.mongodb.async.client.MongoDatabase;
 import io.dropwizard.db.*;
 import io.dropwizard.setup.*;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+
+//import org.bson.Document;
 import org.hibernate.validator.constraints.*;
 
 public class Main extends FiberApplication<Main.JModernConfiguration> {
@@ -50,4 +58,18 @@ public class Main extends FiberApplication<Main.JModernConfiguration> {
         public String getTemplate()    { return template; }
         public String getDefaultName() { return defaultName; }
     }
+
+//    @Override
+//    public void fiberRun(JModernConfiguration cfg, Environment env) throws ClassNotFoundException {
+//        JmxReporter.forRegistry(env.metrics()).build().start(); // Manually add JMX reporting (Dropwizard regression)
+//
+//        MongoClient mongoClient = MongoClients.create(new ConnectionString("mongodb://localhost:27017"));
+//        MongoDatabase database = mongoClient.getDatabase("message_demo");
+//        MongoCollection<Document> collection = database.getCollection("messages");
+//
+//        MessageRepository messageRepository = new MongoDbAsyncMessageRepositoryImpl(collection);
+//        MessageController messageController = new MessageController(messageRepository);
+//
+//        env.jersey().register(messageController);
+//    }
 }
